@@ -1,0 +1,17 @@
+{
+  "name": "Auto-generate tests for new functions",
+  "description": "When a Python file in backend/ or scoring/ is saved, delegate to the test-writer subagent to generate or update tests covering every public function. Follows conventions in .kiro/steering/project.md.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "backend/services/**/*.py",
+      "scoring/**/*.py"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "The file that was just saved needs test coverage review.\n\n1. Identify all public functions and classes (not prefixed with _).\n2. Check if the matching tests/test_*.py file exists and covers each one.\n3. For any uncovered public function, add a test covering:\n   - The happy path\n   - One error/edge case\n   - If the function returns a model with provenance, assert provenance is populated and non-null\n4. Follow pytest conventions. Use fixtures from tests/conftest.py if present.\n5. Never modify the source file. Only write test code.\n6. Run the test file after writing; report pass/fail counts."
+  },
+  "enabled": true
+}

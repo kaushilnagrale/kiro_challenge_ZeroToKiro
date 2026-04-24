@@ -1,0 +1,14 @@
+{
+  "name": "Pre-commit provenance & safety scan",
+  "description": "Manual trigger before every commit. Scans staged files for missing provenance, hardcoded secrets, print/console.log statements, oversized files, and orphaned TODOs. Outputs a findings table — does NOT auto-fix.",
+  "version": "1",
+  "when": {
+    "type": "userTriggered",
+    "buttonText": "Run pre-commit review"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Run git diff --cached to get the staged changes.\n\nScan for these violations and produce a markdown findings table with columns: Severity | File:Line | Issue | Suggested fix.\n\nRules:\n\n1. CRITICAL — any function returning a Route, SafetyAlert, RiskScore, RouteResponse, RiskResponse, WeatherResponse, or StopsResponse WITHOUT populating the provenance field. This violates the Accountability Logic Gate.\n\n2. CRITICAL — hardcoded strings matching API key patterns (AKIA*, sk-*, Bearer *, pk.eyJ*, AIza*).\n\n3. HIGH — print() or console.log() left in non-test, non-script files.\n\n4. MEDIUM — files exceeding 400 lines.\n\n5. LOW — TODO / FIXME comments without a linked issue number.\n\nDo NOT auto-fix anything. If no issues found, reply exactly: CLEAN — safe to commit."
+  },
+  "enabled": true
+}

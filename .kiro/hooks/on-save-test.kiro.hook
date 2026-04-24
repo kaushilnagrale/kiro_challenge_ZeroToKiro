@@ -1,0 +1,17 @@
+{
+  "name": "Auto-run critical tests on save",
+  "description": "Runs the Logic Gate and hydration classifier tests every time a backend or scoring file changes. Keeps our two most critical modules green at all times. This is the Accountability guardrail enforced at the development loop level.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "backend/**/*.py",
+      "scoring/**/*.py"
+    ]
+  },
+  "then": {
+    "type": "shellCommand",
+    "command": "cd backend && python -m pytest tests/test_logic_gate.py tests/test_hydration.py -x --tb=short"
+  },
+  "enabled": true
+}
