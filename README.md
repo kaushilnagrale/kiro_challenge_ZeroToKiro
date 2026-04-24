@@ -38,6 +38,9 @@
 
 ---
 
+## Links for resources
+https://drive.google.com/drive/u/1/folders/11ZtcRmb69xl45mMZ1a2wZWTcbNZ23XVs
+
 ## Features & Functionality
 
 - <!-- Feature 1 -->
