@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+
+# Node / Expo
+node_modules/
+.expo/
+dist/
+*.log
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Data (large files)
+data/*.tif
+data/*.pkl
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Kiro cache (keep specs/steering/hooks/agents in git)
+.kiro/cache/
