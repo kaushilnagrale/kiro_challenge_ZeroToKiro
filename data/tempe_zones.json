@@ -1,0 +1,69 @@
+{
+  "hot_zones": [
+    {
+      "name": "Mill Ave corridor",
+      "center_lat": 33.4255,
+      "center_lng": -111.9400,
+      "radius_m": 400,
+      "delta_c": 6
+    },
+    {
+      "name": "ASU Surface Parking Lot 59",
+      "center_lat": 33.4195,
+      "center_lng": -111.9340,
+      "radius_m": 300,
+      "delta_c": 8
+    },
+    {
+      "name": "Apache Blvd & Rural Rd intersection",
+      "center_lat": 33.4148,
+      "center_lng": -111.9260,
+      "radius_m": 250,
+      "delta_c": 5
+    },
+    {
+      "name": "Tempe Marketplace parking",
+      "center_lat": 33.4050,
+      "center_lng": -111.9090,
+      "radius_m": 350,
+      "delta_c": 7
+    },
+    {
+      "name": "University Dr & Rural Rd",
+      "center_lat": 33.4215,
+      "center_lng": -111.9265,
+      "radius_m": 200,
+      "delta_c": 4
+    }
+  ],
+  "cool_zones": [
+    {
+      "name": "Papago Park canopy",
+      "center_lat": 33.4508,
+      "center_lng": -111.9498,
+      "radius_m": 600,
+      "delta_c": -7
+    },
+    {
+      "name": "Tempe Town Lake north shore",
+      "center_lat": 33.4285,
+      "center_lng": -111.9498,
+      "radius_m": 500,
+      "delta_c": -5
+    },
+    {
+      "name": "ASU Palm Walk",
+      "center_lat": 33.4215,
+      "center_lng": -111.9390,
+      "radius_m": 200,
+      "delta_c": -4
+    },
+    {
+      "name": "Tempe Beach Park",
+      "center_lat": 33.4285,
+      "center_lng": -111.9498,
+      "radius_m": 300,
+      "delta_c": -6
+    }
+  ]
+}

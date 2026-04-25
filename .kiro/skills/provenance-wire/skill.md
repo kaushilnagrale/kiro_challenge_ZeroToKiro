@@ -103,4 +103,4 @@ def validate_safety_alert(alert: SafetyAlert) -> SafetyAlert | None:
 - `provenance=Provenance()` with no fields populated — blocks the gate
 - `timestamp=datetime.utcnow()` unconditionally — lies about age
 - Computing age in the route handler instead of service — timing drift
-- Passing provenance as Optional in function signatures — it's required
+- Passing provenance as Optional in function signatures — it's requireds

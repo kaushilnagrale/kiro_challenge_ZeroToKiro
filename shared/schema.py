@@ -105,9 +105,10 @@ class Stop(BaseModel):
 
 
 class StopsResponse(BaseModel):
-    fountains: list[Stop]
-    cafes: list[Stop]
-    repair: list[Stop]
+    fountains: list[Stop]  # Official water sources
+    cafes: list[Stop]  # Commercial refreshments
+    repair: list[Stop]  # Bike maintenance
+    shade_zones: list[Stop] = []  # Shaded rest areas (shelters, tree groves, covered areas)
     provenance: Provenance
 
 
