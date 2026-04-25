@@ -1,0 +1,5 @@
+name: on-spec-change-readme-sync
+description: Regenerates the README architecture section from the current Kiro specs.
+trigger: file.save
+match: ".kiro/specs/*.md"
+run: python scripts/sync_readme.py

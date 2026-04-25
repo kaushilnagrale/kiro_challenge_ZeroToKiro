@@ -1,0 +1,5 @@
+name: on-save-test
+description: Runs critical tests on every Python file save in the backend.
+trigger: file.save
+match: "backend/**/*.py"
+run: pytest tests/test_logic_gate.py tests/test_route.py -x --tb=short

@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "PulseRoute",
+    "slug": "pulseroute",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0ea5e9"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.pulseroute.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "PulseRoute uses your location to plan cool, safe cycling routes.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "PulseRoute uses your location during rides to monitor your route and suggest hydration stops."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0ea5e9"
+      },
+      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"]
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "PulseRoute uses your location to plan cool routes and monitor your ride."
+        }
+      ],
+      "expo-notifications"
+    ],
+    "extra": {
+      "apiUrl": "http://localhost:8001"
+    }
+  }
+}

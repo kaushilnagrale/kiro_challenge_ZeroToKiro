@@ -1,0 +1,7 @@
+name: pre-commit-provenance-check
+description: |
+  Scans staged Python files. Fails the commit if any function returns a
+  SafetyAlert or Route without a provenance field.
+  This IS the Accountability Logic Gate at the development-workflow level.
+trigger: git.pre_commit
+run: python scripts/check_provenance.py
