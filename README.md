@@ -275,41 +275,77 @@ python -m pytest backend/tests/ --cov=backend.safety --cov-report=term
 
 ## Architecture
 
-```
-┌─────────────────────────────────────┐
-│  React PWA (Vite + TypeScript)      │
-│  ┌────────────┐  ┌──────────────┐   │
-│  │  Leaflet   │  │  Biosignal   │   │
-│  │  Map + UI  │  │  Panel       │   │
-│  └──────┬─────┘  └──────┬───────┘   │
-│         │               │            │
-│  ┌──────▼───────────────▼─────────┐ │
-│  │  Zustand Store + API Client    │ │
-│  └──────────────┬─────────────────┘ │
-└─────────────────┼───────────────────┘
-                  │ HTTPS
-┌─────────────────▼───────────────────┐
-│  FastAPI Backend                    │
-│                                     │
-│  POST /route ──► RouteService       │
-│                  MrtService         │
-│                  StopsService       │
-│                  Provenance         │
-│                                     │
-│  POST /risk  ──► BioService         │
-│                  HydrationService   │
-│                  StopRecommender    │
-│                  LookaheadService   │
-│                  Logic Gate ✓       │
-│                                     │
-│  GET /stops  ──► StopsService       │
-│  GET /weather ─► WeatherService     │
-└─────────────────────────────────────┘
-          │
-  ┌───────┼──────┬───────────┐
-  ▼       ▼      ▼           ▼
-Mapbox  Open-   NWS      Tempe zone
-Routes  Meteo   Alerts   seed data
+```mermaid
+graph TB
+    subgraph Frontend["React PWA (Vite + TypeScript)"]
+        direction TB
+        OB[Onboarding<br/>Fitness app connect]
+        RP[Ride Planner<br/>Origin / Destination]
+        RV[Route Preview<br/>Leaflet map + cards]
+        LT[Live Tracking<br/>Biosignal panel + alerts]
+        RH[Ride History<br/>Exposure stats]
+
+        ZS[Zustand Store]
+        AC[API Client]
+
+        OB & RP & RV & LT & RH --> ZS
+        ZS --> AC
+    end
+
+    AC -->|HTTPS| GW
+
+    subgraph Backend["FastAPI Backend"]
+        direction TB
+        GW["/route  /risk  /stops  /weather  /bio  /profile"]
+
+        subgraph RouteFlow["POST /route"]
+            RS[RouteService<br/>Mapbox Directions]
+            MS[MrtService<br/>Zone lookup]
+            SS[StopsService<br/>Seed data]
+            RS --> MS --> SS
+        end
+
+        subgraph RiskFlow["POST /risk"]
+            BS[BioService<br/>Simulator]
+            HS[HydrationService<br/>Personalized thresholds]
+            SR[StopRecommender<br/>Risk-aware ranking]
+            LS[LookaheadService<br/>10-min MRT lookahead]
+            LG{"SafetyGate<br/>validate_safety_alert()"}
+            BS --> HS --> SR --> LS --> LG
+        end
+
+        subgraph SupportFlow["GET /weather · GET /stops"]
+            WS[WeatherService]
+            CS[CacheService]
+            WS <--> CS
+        end
+
+        GW --> RouteFlow
+        GW --> RiskFlow
+        GW --> SupportFlow
+    end
+
+    subgraph External["External APIs"]
+        MB[Mapbox<br/>Directions API]
+        OM[Open-Meteo<br/>Hourly forecast]
+        NWS[NWS<br/>Heat advisories]
+        AN[AirNow<br/>AQI · optional]
+    end
+
+    subgraph Data["Local Data"]
+        SJ[stops_seed.json<br/>18 Tempe stops]
+        TZ[tempe_zones.json<br/>MRT hot/cool zones]
+    end
+
+    RS -->|cycling route| MB
+    WS -->|forecast| OM
+    WS -->|alerts| NWS
+    WS -->|AQI| AN
+    SS --> SJ
+    MS --> TZ
+
+    LG -->|None — fabrication blocked| FallbackUI[UI: Sensor data unavailable]
+    LG -->|SafetyAlert + provenance| AlertUI[UI: Stop card + Why? modal]
 ```
 
 ---
