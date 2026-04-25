@@ -1,0 +1,182 @@
+[
+  {
+    "id": "official-001",
+    "name": "Tempe Beach Park Fountain",
+    "lat": 33.4285,
+    "lng": -111.9498,
+    "amenities": ["water", "shade", "restroom"],
+    "open_now": true,
+    "source": "official",
+    "source_ref": "stops_seed_v1"
+  },
+  {
+    "id": "official-002",
+    "name": "Papago Park Drinking Fountain",
+    "lat": 33.4508,
+    "lng": -111.9498,
+    "amenities": ["water", "shade"],
+    "open_now": true,
+    "source": "official",
+    "source_ref": "stops_seed_v1"
+  },
+  {
+    "id": "official-003",
+    "name": "Kiwanis Park Fountain",
+    "lat": 33.3985,
+    "lng": -111.9098,
+    "amenities": ["water", "restroom"],
+    "open_now": true,
+    "source": "official",
+    "source_ref": "stops_seed_v1"
+  },
+  {
+    "id": "fountain-001",
+    "name": "ASU Memorial Union Fountain",
+    "lat": 33.4215,
+    "lng": -111.9390,
+    "amenities": ["water"],
+    "open_now": true,
+    "source": "fountain",
+    "source_ref": "stops_seed_v1"
+  },
+  {
+    "id": "fountain-002",
+    "name": "ASU Hayden Library Fountain",
+    "lat": 33.4185,
+    "lng": -111.9340,
+    "amenities": ["water", "ac"],
+    "open_now": true,
+    "source": "fountain",
+    "source_ref": "stops_seed_v1"
+  },
+  {
+    "id": "fountain-003",
+    "name": "ASU Sun Devil Fitness Fountain",
+    "lat": 33.4155,
+    "lng": -111.9320,
+    "amenities": ["water", "restroom"],
+    "open_now": true,
+    "source": "fountain",
+    "source_ref": "stops_seed_v1"
+  },
+  {
+    "id": "fountain-004",
+    "name": "ASU Palm Walk Fountain",
+    "lat": 33.4220,
+    "lng": -111.9380,
+    "amenities": ["water", "shade"],
+    "open_now": true,
+    "source": "fountain",
+    "source_ref": "stops_seed_v1"
+  },
+  {
+    "id": "commercial-001",
+    "name": "Starbucks Mill Ave",
+    "lat": 33.4255,
+    "lng": -111.9400,
+    "amenities": ["water", "food", "ac"],
+    "open_now": true,
+    "source": "commercial",
+    "source_ref": "stops_seed_v1"
+  },
+  {
+    "id": "commercial-002",
+    "name": "QT on Apache",
+    "lat": 33.4148,
+    "lng": -111.9260,
+    "amenities": ["water", "food", "restroom"],
+    "open_now": true,
+    "source": "commercial",
+    "source_ref": "stops_seed_v1"
+  },
+  {
+    "id": "commercial-003",
+    "name": "Dutch Bros University",
+    "lat": 33.4215,
+    "lng": -111.9265,
+    "amenities": ["water", "food"],
+    "open_now": true,
+    "source": "commercial",
+    "source_ref": "stops_seed_v1"
+  },
+  {
+    "id": "commercial-004",
+    "name": "Whole Foods Tempe",
+    "lat": 33.4050,
+    "lng": -111.9090,
+    "amenities": ["water", "food", "ac", "restroom"],
+    "open_now": true,
+    "source": "commercial",
+    "source_ref": "stops_seed_v1"
+  },
+  {
+    "id": "commercial-005",
+    "name": "7-Eleven Rural Rd",
+    "lat": 33.4195,
+    "lng": -111.9340,
+    "amenities": ["water", "food"],
+    "open_now": true,
+    "source": "commercial",
+    "source_ref": "stops_seed_v1"
+  },
+  {
+    "id": "public-001",
+    "name": "Tempe Public Library",
+    "lat": 33.4148,
+    "lng": -111.9390,
+    "amenities": ["water", "ac", "restroom", "shade"],
+    "open_now": true,
+    "source": "public",
+    "source_ref": "stops_seed_v1"
+  },
+  {
+    "id": "public-002",
+    "name": "Valley Metro Shelter Mill/University",
+    "lat": 33.4255,
+    "lng": -111.9390,
+    "amenities": ["shade"],
+    "open_now": null,
+    "source": "public",
+    "source_ref": "stops_seed_v1"
+  },
+  {
+    "id": "public-003",
+    "name": "Valley Metro Shelter Apache/Rural",
+    "lat": 33.4148,
+    "lng": -111.9265,
+    "amenities": ["shade"],
+    "open_now": null,
+    "source": "public",
+    "source_ref": "stops_seed_v1"
+  },
+  {
+    "id": "public-004",
+    "name": "Tempe Center for the Arts",
+    "lat": 33.4285,
+    "lng": -111.9498,
+    "amenities": ["water", "shade", "restroom", "ac"],
+    "open_now": true,
+    "source": "public",
+    "source_ref": "stops_seed_v1"
+  },
+  {
+    "id": "public-005",
+    "name": "Tempe Marketplace Shade Structure",
+    "lat": 33.4050,
+    "lng": -111.9090,
+    "amenities": ["shade", "food"],
+    "open_now": null,
+    "source": "public",
+    "source_ref": "stops_seed_v1"
+  },
+  {
+    "id": "public-006",
+    "name": "Rio Salado Shade Shelter",
+    "lat": 33.4285,
+    "lng": -111.9390,
+    "amenities": ["shade", "water"],
+    "open_now": null,
+    "source": "public",
+    "source_ref": "stops_seed_v1"
+  }
+]

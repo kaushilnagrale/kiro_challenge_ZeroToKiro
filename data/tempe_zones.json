@@ -1,0 +1,181 @@
+{
+  "hot_zones": [
+    {
+      "name": "Mill Ave corridor",
+      "center_lat": 33.4255,
+      "center_lng": -111.9400,
+      "radius_m": 400,
+      "delta_c": 6
+    },
+    {
+      "name": "ASU Surface Parking Lot 59",
+      "center_lat": 33.4195,
+      "center_lng": -111.9340,
+      "radius_m": 300,
+      "delta_c": 8
+    },
+    {
+      "name": "Apache Blvd & Rural Rd intersection",
+      "center_lat": 33.4148,
+      "center_lng": -111.9260,
+      "radius_m": 250,
+      "delta_c": 5
+    },
+    {
+      "name": "Tempe Marketplace parking",
+      "center_lat": 33.4050,
+      "center_lng": -111.9090,
+      "radius_m": 350,
+      "delta_c": 7
+    },
+    {
+      "name": "University Dr & Rural Rd",
+      "center_lat": 33.4215,
+      "center_lng": -111.9265,
+      "radius_m": 200,
+      "delta_c": 4
+    },
+    {
+      "name": "Scottsdale Fashion Square parking",
+      "center_lat": 33.5090,
+      "center_lng": -111.9260,
+      "radius_m": 500,
+      "delta_c": 8
+    },
+    {
+      "name": "Scottsdale Rd & Camelback Rd",
+      "center_lat": 33.5090,
+      "center_lng": -111.9261,
+      "radius_m": 300,
+      "delta_c": 6
+    },
+    {
+      "name": "Old Town Scottsdale plaza",
+      "center_lat": 33.4942,
+      "center_lng": -111.9261,
+      "radius_m": 400,
+      "delta_c": 5
+    },
+    {
+      "name": "Phoenix Sky Harbor tarmac zone",
+      "center_lat": 33.4373,
+      "center_lng": -112.0078,
+      "radius_m": 800,
+      "delta_c": 9
+    },
+    {
+      "name": "I-10 & I-17 interchange",
+      "center_lat": 33.4700,
+      "center_lng": -112.0950,
+      "radius_m": 600,
+      "delta_c": 7
+    },
+    {
+      "name": "Camelback Rd open corridor",
+      "center_lat": 33.5090,
+      "center_lng": -112.0200,
+      "radius_m": 400,
+      "delta_c": 5
+    },
+    {
+      "name": "Mesa surface lots",
+      "center_lat": 33.4152,
+      "center_lng": -111.8315,
+      "radius_m": 500,
+      "delta_c": 7
+    },
+    {
+      "name": "Chandler Blvd & Arizona Ave",
+      "center_lat": 33.3062,
+      "center_lng": -111.8413,
+      "radius_m": 350,
+      "delta_c": 6
+    }
+  ],
+  "cool_zones": [
+    {
+      "name": "Papago Park canopy",
+      "center_lat": 33.4508,
+      "center_lng": -111.9498,
+      "radius_m": 600,
+      "delta_c": -7
+    },
+    {
+      "name": "Tempe Town Lake north shore",
+      "center_lat": 33.4285,
+      "center_lng": -111.9498,
+      "radius_m": 500,
+      "delta_c": -5
+    },
+    {
+      "name": "ASU Palm Walk",
+      "center_lat": 33.4215,
+      "center_lng": -111.9390,
+      "radius_m": 200,
+      "delta_c": -4
+    },
+    {
+      "name": "Tempe Beach Park",
+      "center_lat": 33.4285,
+      "center_lng": -111.9498,
+      "radius_m": 300,
+      "delta_c": -6
+    },
+    {
+      "name": "Scottsdale Greenbelt canal path",
+      "center_lat": 33.4942,
+      "center_lng": -111.9400,
+      "radius_m": 800,
+      "delta_c": -5
+    },
+    {
+      "name": "Indian Bend Wash greenway",
+      "center_lat": 33.5200,
+      "center_lng": -111.9300,
+      "radius_m": 1000,
+      "delta_c": -6
+    },
+    {
+      "name": "South Mountain Park trailhead",
+      "center_lat": 33.3400,
+      "center_lng": -112.0700,
+      "radius_m": 700,
+      "delta_c": -4
+    },
+    {
+      "name": "Camelback Mountain Echo Canyon",
+      "center_lat": 33.5200,
+      "center_lng": -111.9740,
+      "radius_m": 500,
+      "delta_c": -5
+    },
+    {
+      "name": "Rio Salado riparian corridor",
+      "center_lat": 33.4285,
+      "center_lng": -112.0000,
+      "radius_m": 600,
+      "delta_c": -5
+    },
+    {
+      "name": "Kiwanis Park lake",
+      "center_lat": 33.4050,
+      "center_lng": -111.9390,
+      "radius_m": 300,
+      "delta_c": -4
+    },
+    {
+      "name": "Chaparral Park Scottsdale",
+      "center_lat": 33.5090,
+      "center_lng": -111.9000,
+      "radius_m": 400,
+      "delta_c": -5
+    },
+    {
+      "name": "Mesa Arts Center shade canopy",
+      "center_lat": 33.4152,
+      "center_lng": -111.8315,
+      "radius_m": 200,
+      "delta_c": -4
+    }
+  ]
+}
