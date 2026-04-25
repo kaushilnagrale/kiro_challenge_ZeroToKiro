@@ -76,8 +76,8 @@ export const MOCK_HISTORY: RideRecord[] = [
   {
     id: 'r3',
     date: '2026-04-21T07:00:00Z',
-    origin: 'Mill Ave',
-    destination: 'Memorial Union, ASU',
+    origin: 'Memorial Union, ASU',
+    destination: 'Mill Ave & 5th St',
     distance_km: 2.8,
     duration_min: 10,
     exposure_deg_min: 88,

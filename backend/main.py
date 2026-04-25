@@ -13,6 +13,7 @@ from contextlib import asynccontextmanager
 
 import structlog
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 logger = structlog.get_logger()
 
@@ -44,6 +45,15 @@ app = FastAPI(
     version="0.1.0",
     description="Cycling co-pilot backend — cool routes, biosignal monitoring, heat safety.",
     lifespan=lifespan,
+)
+
+# Hackathon CORS — allow all origins so the Expo dev client can reach the backend
+# regardless of whether it's running on a simulator (localhost) or a physical device (LAN IP).
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 

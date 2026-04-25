@@ -183,6 +183,20 @@ class RiskRequest(BaseModel):
     current_lng: float
     ride_minutes: float
     baseline_hr: Optional[float] = None
+    # Fix 2: rider profile for personalized thresholds
+    sensitive_mode: bool = False
+    fitness_level: Optional[Literal["beginner", "intermediate", "advanced"]] = None
+    # Fix 3: upcoming segments for predictive lookahead
+    upcoming_segments: list[RouteSegment] = Field(default_factory=list)
+    current_eta_seconds: int = 0
+
+
+class LookaheadWarning(BaseModel):
+    """Predictive heat warning — fired before the rider enters a hot zone."""
+    projected_points: int
+    reason: str
+    seconds_until_hot_zone: int
+    peak_mrt_c: float
 
 
 class RiskResponse(BaseModel):
@@ -190,6 +204,10 @@ class RiskResponse(BaseModel):
     alert: Optional[SafetyAlert] = None
     fallback: bool = False
     fallback_message: Optional[str] = None
+    # Fix 3: lookahead warning (present even when current risk is green)
+    lookahead: Optional[LookaheadWarning] = None
+    # Fix 1: human-readable stop recommendation reason
+    stop_reason: Optional[str] = None
 
 
 # ─────────── Health ───────────

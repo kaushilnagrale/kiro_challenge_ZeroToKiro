@@ -86,14 +86,42 @@ def _build_segments(
     ambient_temp_c: float,
     mrt_svc: Any,
     chunk_size: int = 10,
+    depart_time: datetime | None = None,
+    forecast: list | None = None,
+    wind_kmh: float = 0.0,
 ) -> list[RouteSegment]:
-    """Split polyline into chunks of ~chunk_size points and build RouteSegment list."""
+    """
+    Split polyline into chunks of ~chunk_size points and build RouteSegment list.
+
+    If depart_time and forecast are provided, each segment uses the forecasted
+    temperature for the hour when the rider will actually be at that segment
+    (depart_time + segment_eta). This gives trip-wide thermal accuracy instead
+    of using a single current-hour temperature for the whole route.
+    """
     segments: list[RouteSegment] = []
     for i, start in enumerate(range(0, len(polyline), chunk_size)):
         chunk = polyline[start : start + chunk_size]
         if not chunk:
             continue
-        mrts = [mrt_svc.get_mrt(lat, lng, ambient_temp_c) for lat, lng in chunk]
+
+        # Estimate when the rider reaches this segment (60s per chunk approximation)
+        eta_seconds = i * 60
+
+        # Pick forecasted temp for this segment's ETA hour
+        seg_temp_c = ambient_temp_c
+        if depart_time is not None and forecast:
+            from datetime import timedelta
+            seg_time = depart_time + timedelta(seconds=eta_seconds)
+            # Find the forecast entry closest to seg_time
+            best = min(
+                forecast,
+                key=lambda h: abs((h.at - seg_time).total_seconds()),
+                default=None,
+            )
+            if best is not None:
+                seg_temp_c = best.temp_c
+
+        mrts = [mrt_svc.get_mrt(lat, lng, seg_temp_c, wind_kmh) for lat, lng in chunk]
         mrt_mean = sum(mrts) / len(mrts)
         segments.append(
             RouteSegment(
@@ -101,8 +129,8 @@ def _build_segments(
                 polyline=list(chunk),
                 mrt_mean_c=mrt_mean,
                 length_m=float(len(chunk) * 50),
-                eta_seconds_into_ride=i * 60,
-                forecasted_temp_c=ambient_temp_c,
+                eta_seconds_into_ride=eta_seconds,
+                forecasted_temp_c=seg_temp_c,
             )
         )
     return segments
@@ -127,6 +155,65 @@ def _top3_stops_by_proximity(
         key=lambda s: _haversine_m(mid_lat, mid_lng, s.lat, s.lng),
     )
     return ranked[:3]
+
+
+def _distribute_stops_along_route(
+    polyline: list[tuple[float, float]],
+    all_stops: list[Stop],
+    route_distance_m: float,
+) -> list[Stop]:
+    """
+    Distribute water stops along the route at regular intervals.
+
+    Strategy:
+    - Compute interval: every 5km for short routes, every 15km for long routes
+    - Sample N evenly-spaced points along the polyline
+    - For each sample point, find the nearest stop within 2km
+    - Deduplicate by stop id
+    - Always include at least the stop nearest the midpoint if any exist
+
+    This ensures stops are spread across the full route length, not clustered
+    at the midpoint.
+    """
+    if not all_stops or not polyline:
+        return []
+
+    # Determine interval based on route length
+    if route_distance_m < 10_000:       # < 10km
+        interval_m = 3_000              # every 3km
+    elif route_distance_m < 50_000:     # 10–50km
+        interval_m = 5_000              # every 5km
+    elif route_distance_m < 200_000:    # 50–200km
+        interval_m = 15_000             # every 15km
+    else:                               # > 200km
+        interval_m = 30_000             # every 30km
+
+    # Number of sample points (at least 3, at most 20)
+    n_samples = max(3, min(20, int(route_distance_m / interval_m) + 1))
+
+    # Sample evenly-spaced indices along the polyline
+    n_pts = len(polyline)
+    sample_indices = [int(i * (n_pts - 1) / (n_samples - 1)) for i in range(n_samples)]
+    sample_points = [polyline[i] for i in sample_indices]
+
+    # For each sample point, find nearest stop within 2km
+    search_radius_m = 2_000
+    selected: list[Stop] = []
+    seen_ids: set[str] = set()
+
+    for lat, lng in sample_points:
+        nearest: Stop | None = None
+        nearest_dist = float("inf")
+        for stop in all_stops:
+            d = _haversine_m(lat, lng, stop.lat, stop.lng)
+            if d < nearest_dist and d <= search_radius_m:
+                nearest_dist = d
+                nearest = stop
+        if nearest and nearest.id not in seen_ids:
+            seen_ids.add(nearest.id)
+            selected.append(nearest)
+
+    return selected
 
 
 class RouteService:
@@ -196,6 +283,8 @@ class RouteService:
             return RouteResponse(**cached)
 
         ambient_temp_c = weather.current.temp_c
+        wind_kmh = weather.current.wind_kmh or 0.0
+        forecast = weather.forecast_hourly
         origin_lat, origin_lng = req.origin
         dest_lat, dest_lng = req.destination
 
@@ -234,10 +323,10 @@ class RouteService:
 
         # ── MRT annotation ─────────────────────────────────────────────────────
         fastest_peak_mrt, fastest_mean_mrt = mrt_svc.annotate_route(
-            fastest_poly, ambient_temp_c
+            fastest_poly, ambient_temp_c, wind_kmh
         )
         pulse_peak_mrt, pulse_mean_mrt = mrt_svc.annotate_route(
-            pulse_poly, ambient_temp_c
+            pulse_poly, ambient_temp_c, wind_kmh
         )
 
         # ── Shade pct ──────────────────────────────────────────────────────────
@@ -246,20 +335,17 @@ class RouteService:
 
         # ── Segments ───────────────────────────────────────────────────────────
         fastest_segments = _build_segments(
-            fastest_poly, "fastest", ambient_temp_c, mrt_svc
+            fastest_poly, "fastest", ambient_temp_c, mrt_svc,
+            depart_time=req.depart_time, forecast=forecast, wind_kmh=wind_kmh,
         )
         pulse_segments = _build_segments(
-            pulse_poly, "pulseroute", ambient_temp_c, mrt_svc
+            pulse_poly, "pulseroute", ambient_temp_c, mrt_svc,
+            depart_time=req.depart_time, forecast=forecast, wind_kmh=wind_kmh,
         )
 
         # ── Stops ──────────────────────────────────────────────────────────────
-        fastest_midpoint = (
-            fastest_poly[len(fastest_poly) // 2] if fastest_poly else (origin_lat, origin_lng)
-        )
-        pulse_midpoint = (
-            pulse_poly[len(pulse_poly) // 2] if pulse_poly else (origin_lat, origin_lng)
-        )
-
+        # Query the full route bbox for stops, then distribute them along the route
+        # rather than clustering at the midpoint.
         fastest_bbox = _route_bbox(fastest_poly) if fastest_poly else (
             origin_lat, origin_lng, dest_lat, dest_lng
         )
@@ -281,8 +367,12 @@ class RouteService:
             + pulse_stops_resp.repair
         )
 
-        fastest_top_stops = _top3_stops_by_proximity(fastest_all_stops, fastest_midpoint)
-        pulse_top_stops = _top3_stops_by_proximity(pulse_all_stops, pulse_midpoint)
+        fastest_top_stops = _distribute_stops_along_route(
+            fastest_poly, fastest_all_stops, fastest_dist
+        )
+        pulse_top_stops = _distribute_stops_along_route(
+            pulse_poly, pulse_all_stops, pulse_dist
+        )
 
         # ── Provenance ─────────────────────────────────────────────────────────
         fetch_time = datetime.now(timezone.utc)

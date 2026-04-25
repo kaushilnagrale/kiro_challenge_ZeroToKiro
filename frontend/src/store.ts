@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { BioSignal, BioMode, RiskLevel, RouteOption, SafetyAlert, RideRecord, RiderProfile, Stop } from './types'
+import type { RouteResponse } from './lib/apiTypes'
 
 interface AppState {
   // Profile
@@ -18,6 +19,9 @@ interface AppState {
   setSelectedRoute: (r: 'fastest' | 'pulseroute') => void
   stops: Stop[]
   setStops: (s: Stop[]) => void
+  /** Raw backend RouteResponse — kept so LiveTracking can read segments for lookahead */
+  rawRouteResponse: RouteResponse | null
+  setRawRouteResponse: (r: RouteResponse | null) => void
 
   // Live ride
   isRiding: boolean
@@ -62,13 +66,15 @@ export const useStore = create<AppState>()(
       setSelectedRoute: (r) => set({ selectedRoute: r }),
       stops: [],
       setStops: (s) => set({ stops: s }),
+      rawRouteResponse: null,
+      setRawRouteResponse: (r) => set({ rawRouteResponse: r }),
 
       isRiding: false,
       startRide: () => set({ isRiding: true, alerts: [] }),
       endRide: () => set({ isRiding: false }),
       bioMode: 'baseline',
       setBioMode: (m) => set({ bioMode: m }),
-      biosignal: { hr: 65, hrv: 50, skin_temp: 33.0, timestamp: new Date().toISOString() },
+      biosignal: { hr: 65, hrv_ms: 50, skin_temp_c: 33.0, timestamp: new Date().toISOString() },
       setBiosignal: (b) => set({ biosignal: b }),
       riskLevel: 'green',
       setRiskLevel: (r) => set({ riskLevel: r }),

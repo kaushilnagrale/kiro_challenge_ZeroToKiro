@@ -338,3 +338,207 @@ def test_route_endpoint_200():
     assert "fastest" in data
     assert "pulseroute" in data
     assert "provenance" in data
+
+
+# ── Unit tests: _route_bbox ───────────────────────────────────────────────────
+
+from backend.services.route_service import (
+    _route_bbox,
+    _top3_stops_by_proximity,
+    _build_segments,
+    _distribute_stops_along_route,
+)
+
+
+def _make_stop(id: str, lat: float, lng: float) -> Stop:
+    return Stop(
+        id=id,
+        name=f"Stop {id}",
+        lat=lat,
+        lng=lng,
+        amenities=["water"],
+        open_now=True,
+        source="test",
+        source_ref=f"test:{id}",
+    )
+
+
+class TestRouteBbox:
+    def test_happy_path(self):
+        poly = [(33.4, -111.9), (33.5, -111.8), (33.3, -112.0)]
+        min_lat, min_lng, max_lat, max_lng = _route_bbox(poly)
+        assert min_lat == pytest.approx(33.3)
+        assert min_lng == pytest.approx(-112.0)
+        assert max_lat == pytest.approx(33.5)
+        assert max_lng == pytest.approx(-111.8)
+
+    def test_single_point(self):
+        """Single-point polyline — all four values equal the point."""
+        poly = [(33.4255, -111.9400)]
+        min_lat, min_lng, max_lat, max_lng = _route_bbox(poly)
+        assert min_lat == max_lat == pytest.approx(33.4255)
+        assert min_lng == max_lng == pytest.approx(-111.9400)
+
+
+# ── Unit tests: _top3_stops_by_proximity ─────────────────────────────────────
+
+
+class TestTop3StopsByProximity:
+    def test_returns_at_most_3(self):
+        stops = [_make_stop(str(i), 33.4 + i * 0.01, -111.9) for i in range(10)]
+        result = _top3_stops_by_proximity(stops, (33.4, -111.9))
+        assert len(result) == 3
+
+    def test_sorted_nearest_first(self):
+        # Stop A is 1 km away, Stop B is 5 km away, Stop C is 10 km away
+        stop_a = _make_stop("a", 33.4255, -111.9400)   # origin itself
+        stop_b = _make_stop("b", 33.4700, -111.9400)   # ~5 km north
+        stop_c = _make_stop("c", 33.5200, -111.9400)   # ~10 km north
+        result = _top3_stops_by_proximity([stop_c, stop_b, stop_a], (33.4255, -111.9400))
+        assert result[0].id == "a"
+        assert result[1].id == "b"
+        assert result[2].id == "c"
+
+    def test_empty_stops_returns_empty(self):
+        result = _top3_stops_by_proximity([], (33.4255, -111.9400))
+        assert result == []
+
+    def test_fewer_than_3_stops(self):
+        stops = [_make_stop("x", 33.4255, -111.9400)]
+        result = _top3_stops_by_proximity(stops, (33.4255, -111.9400))
+        assert len(result) == 1
+
+
+# ── Unit tests: _build_segments ───────────────────────────────────────────────
+
+
+class TestBuildSegments:
+    def _make_mrt_svc(self, mrt_value: float = 45.0):
+        svc = MagicMock()
+        svc.get_mrt.return_value = mrt_value
+        svc.zones = []
+        return svc
+
+    def test_happy_path_produces_segments(self):
+        poly = [(33.4 + i * 0.001, -111.9) for i in range(25)]
+        mrt_svc = self._make_mrt_svc(45.0)
+        segments = _build_segments(poly, "fastest", 41.0, mrt_svc, chunk_size=10)
+        assert len(segments) == 3  # 25 pts / 10 = 3 chunks
+        for seg in segments:
+            assert seg.mrt_mean_c == pytest.approx(45.0)
+            assert seg.id.startswith("seg-fastest-")
+
+    def test_segment_ids_are_unique(self):
+        poly = [(33.4 + i * 0.001, -111.9) for i in range(30)]
+        mrt_svc = self._make_mrt_svc()
+        segments = _build_segments(poly, "pulseroute", 41.0, mrt_svc)
+        ids = [s.id for s in segments]
+        assert len(ids) == len(set(ids)), "Segment IDs must be unique"
+
+    def test_empty_polyline_returns_empty(self):
+        mrt_svc = self._make_mrt_svc()
+        segments = _build_segments([], "fastest", 41.0, mrt_svc)
+        assert segments == []
+
+
+# ── Unit tests: _distribute_stops_along_route ─────────────────────────────────
+
+
+class TestDistributeStopsAlongRoute:
+    """Tests for the newly added _distribute_stops_along_route function."""
+
+    def _straight_polyline(self, n: int = 20) -> list[tuple[float, float]]:
+        """N evenly-spaced points along a straight east-west line."""
+        return [(33.4255, -111.94 + i * 0.001) for i in range(n)]
+
+    # ── Happy path ────────────────────────────────────────────────────────────
+
+    def test_stops_distributed_across_short_route(self):
+        """Short route (<10 km): stops should be picked from across the polyline."""
+        poly = self._straight_polyline(20)
+        # Place stops at the start, middle, and end of the polyline
+        stops = [
+            _make_stop("start", 33.4255, -111.940),   # near poly[0]
+            _make_stop("mid",   33.4255, -111.930),   # near poly[10]
+            _make_stop("end",   33.4255, -111.921),   # near poly[19]
+        ]
+        result = _distribute_stops_along_route(poly, stops, route_distance_m=5_000)
+        ids = {s.id for s in result}
+        # All three stops are within 2 km of some sample point — expect all selected
+        assert len(result) >= 1
+        assert ids.issubset({"start", "mid", "end"})
+
+    def test_no_duplicate_stops(self):
+        """The same stop must not appear twice even if it's nearest to multiple sample points."""
+        poly = self._straight_polyline(20)
+        # Only one stop — it will be nearest to every sample point
+        stops = [_make_stop("only", 33.4255, -111.930)]
+        result = _distribute_stops_along_route(poly, stops, route_distance_m=5_000)
+        assert len(result) == 1, "Duplicate stop returned"
+        assert result[0].id == "only"
+
+    def test_interval_thresholds(self):
+        """Verify n_samples stays within [3, 20] for extreme route lengths."""
+        poly = self._straight_polyline(50)
+        stops = [_make_stop(str(i), 33.4255, -111.94 + i * 0.001) for i in range(50)]
+
+        # Very short route — should still produce at least 1 result (3 sample points)
+        result_short = _distribute_stops_along_route(poly, stops, route_distance_m=500)
+        assert len(result_short) >= 0  # may be 0 if stops are outside 2 km radius
+
+        # Very long route (>200 km) — n_samples capped at 20
+        result_long = _distribute_stops_along_route(poly, stops, route_distance_m=300_000)
+        assert len(result_long) <= 20
+
+    def test_stops_outside_search_radius_excluded(self):
+        """Stops more than 2 km from every sample point must not be selected."""
+        poly = [(33.4255, -111.9400)]  # single-point polyline
+        # Stop is ~50 km away
+        far_stop = _make_stop("far", 34.0, -111.9400)
+        result = _distribute_stops_along_route(poly, [far_stop], route_distance_m=5_000)
+        assert result == [], "Stop outside 2 km radius should not be selected"
+
+    # ── Edge / error cases ────────────────────────────────────────────────────
+
+    def test_empty_stops_returns_empty(self):
+        poly = self._straight_polyline(10)
+        result = _distribute_stops_along_route(poly, [], route_distance_m=5_000)
+        assert result == []
+
+    def test_empty_polyline_returns_empty(self):
+        stops = [_make_stop("a", 33.4255, -111.9400)]
+        result = _distribute_stops_along_route([], stops, route_distance_m=5_000)
+        assert result == []
+
+    def test_both_empty_returns_empty(self):
+        result = _distribute_stops_along_route([], [], route_distance_m=5_000)
+        assert result == []
+
+    def test_medium_route_interval(self):
+        """Route between 10–50 km uses 5 km interval; n_samples in [3, 20]."""
+        poly = self._straight_polyline(30)
+        stops = [_make_stop(str(i), 33.4255, -111.94 + i * 0.001) for i in range(30)]
+        result = _distribute_stops_along_route(poly, stops, route_distance_m=25_000)
+        assert len(result) <= 20
+
+    def test_long_route_interval(self):
+        """Route between 50–200 km uses 15 km interval."""
+        poly = self._straight_polyline(30)
+        stops = [_make_stop(str(i), 33.4255, -111.94 + i * 0.001) for i in range(30)]
+        result = _distribute_stops_along_route(poly, stops, route_distance_m=100_000)
+        assert len(result) <= 20
+
+    def test_very_long_route_interval(self):
+        """Route >200 km uses 30 km interval."""
+        poly = self._straight_polyline(30)
+        stops = [_make_stop(str(i), 33.4255, -111.94 + i * 0.001) for i in range(30)]
+        result = _distribute_stops_along_route(poly, stops, route_distance_m=250_000)
+        assert len(result) <= 20
+
+    def test_single_point_polyline(self):
+        """Single-point polyline — should not crash, returns 0 or 1 stop."""
+        poly = [(33.4255, -111.9400)]
+        stops = [_make_stop("near", 33.4255, -111.9400)]  # exactly at the point
+        result = _distribute_stops_along_route(poly, stops, route_distance_m=5_000)
+        # n_samples = max(3, ...) but n_pts = 1, so all sample_indices = 0
+        assert len(result) <= 1

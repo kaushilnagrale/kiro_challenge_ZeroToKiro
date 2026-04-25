@@ -221,15 +221,15 @@ async def test_provenance_env_source_not_none():
 
 
 async def test_forecast_hourly_has_6_entries():
-    """forecast_hourly must contain exactly 6 entries."""
+    """forecast_hourly must contain at least 6 entries (expanded to 12 for lookahead)."""
     svc = WeatherService()
     mock_client = _make_client_mock()
 
     with patch("httpx.AsyncClient", return_value=mock_client):
         result = await svc.get_weather(lat=33.4255, lng=-111.9400)
 
-    assert len(result.forecast_hourly) == 6, (
-        f"Expected 6 forecast entries, got {len(result.forecast_hourly)}"
+    assert len(result.forecast_hourly) >= 6, (
+        f"Expected at least 6 forecast entries, got {len(result.forecast_hourly)}"
     )
 
 
@@ -250,3 +250,107 @@ def test_weather_endpoint_200():
     assert "advisories" in data
     assert "provenance" in data
     assert data["provenance"]["env_source"] is not None
+
+
+# ── _wind_chill_offset tests ──────────────────────────────────────────────────
+# The function is private but has well-defined boundary behaviour worth
+# pinning directly, in addition to the integration path through get_weather.
+
+from backend.services.weather_service import _wind_chill_offset  # noqa: E402
+
+
+class TestWindChillOffset:
+    """Unit tests for the _wind_chill_offset helper added in the latest diff."""
+
+    def test_zero_wind_returns_zero(self):
+        """No wind → no cooling offset."""
+        assert _wind_chill_offset(0.0) == 0.0
+
+    def test_negative_wind_returns_zero(self):
+        """Negative wind speed is nonsensical — treated as no wind."""
+        assert _wind_chill_offset(-5.0) == 0.0
+
+    def test_small_wind_proportional(self):
+        """10 km/h → -1.5°C (one full step, no cap)."""
+        result = _wind_chill_offset(10.0)
+        assert result == pytest.approx(-1.5, abs=1e-9)
+
+    def test_moderate_wind_proportional(self):
+        """20 km/h → -3.0°C (two steps, still below cap)."""
+        result = _wind_chill_offset(20.0)
+        assert result == pytest.approx(-3.0, abs=1e-9)
+
+    def test_cap_at_minus_six(self):
+        """40 km/h would be -6.0°C without cap; cap must hold."""
+        result = _wind_chill_offset(40.0)
+        assert result == pytest.approx(-6.0, abs=1e-9)
+
+    def test_very_high_wind_still_capped(self):
+        """Extreme wind (200 km/h) must not exceed the -6°C cap."""
+        result = _wind_chill_offset(200.0)
+        assert result == pytest.approx(-6.0, abs=1e-9)
+
+    def test_return_value_is_non_positive(self):
+        """Offset must always be ≤ 0 (wind only cools, never warms)."""
+        for speed in [0.0, 5.0, 15.0, 40.0, 100.0]:
+            assert _wind_chill_offset(speed) <= 0.0
+
+
+async def test_get_weather_wind_kmh_propagated():
+    """wind_kmh from Open-Meteo current_weather flows through to current snapshot."""
+    now_utc = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+    times = [(now_utc + timedelta(hours=h)).strftime("%Y-%m-%dT%H:%M") for h in range(24)]
+
+    open_meteo_with_wind = {
+        "current_weather": {
+            "temperature": 38.0,
+            "windspeed": 25.0,   # <── the value we want to see in the response
+            "time": times[0],
+        },
+        "hourly": {
+            "time": times,
+            "temperature_2m": [38.0] * 24,
+            "relativehumidity_2m": [20] * 24,
+            "uv_index": [9.0] * 24,
+        },
+    }
+
+    svc = WeatherService()
+    mock_client = _make_client_mock(open_meteo_data=open_meteo_with_wind)
+
+    with patch("httpx.AsyncClient", return_value=mock_client):
+        result = await svc.get_weather(lat=33.4255, lng=-111.9400)
+
+    assert result.current.wind_kmh == pytest.approx(25.0)
+    # Provenance must still be populated
+    assert result.provenance.env_source is not None
+    assert result.provenance.env_source.source_id == "open-meteo"
+
+
+async def test_get_weather_zero_wind_does_not_error():
+    """windspeed=0 in Open-Meteo payload → _wind_chill_offset(0) path, no exception."""
+    now_utc = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+    times = [(now_utc + timedelta(hours=h)).strftime("%Y-%m-%dT%H:%M") for h in range(24)]
+
+    calm_day = {
+        "current_weather": {
+            "temperature": 40.0,
+            "windspeed": 0.0,
+            "time": times[0],
+        },
+        "hourly": {
+            "time": times,
+            "temperature_2m": [40.0] * 24,
+            "relativehumidity_2m": [10] * 24,
+            "uv_index": [10.0] * 24,
+        },
+    }
+
+    svc = WeatherService()
+    mock_client = _make_client_mock(open_meteo_data=calm_day)
+
+    with patch("httpx.AsyncClient", return_value=mock_client):
+        result = await svc.get_weather(lat=33.4255, lng=-111.9400)
+
+    assert result.current.wind_kmh == pytest.approx(0.0)
+    assert result.provenance.env_source is not None

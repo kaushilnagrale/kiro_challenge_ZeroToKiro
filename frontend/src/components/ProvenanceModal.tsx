@@ -1,4 +1,5 @@
 import { useStore } from '../store'
+import type { SourceRef } from '../types'
 
 export function ProvenanceModal() {
   const { provenanceModal, setProvenanceModal } = useStore()
@@ -20,11 +21,13 @@ export function ProvenanceModal() {
         <p className="text-white/70 text-sm mb-4">{message}</p>
 
         <div className="space-y-3 text-sm">
-          <ProvenanceRow label="Biosignal source" value={provenance.biosignal_source} ts={provenance.biosignal_ts} />
-          <ProvenanceRow label="Environmental source" value={provenance.env_source} ts={provenance.env_ts} />
+          <SourceRefRow label="Biosignal source" ref={provenance.bio_source} />
+          <SourceRefRow label="Environmental source" ref={provenance.env_source} />
           <div className="flex justify-between items-start py-2 border-b border-border">
             <span className="text-white/50">Route segment</span>
-            <span className="text-white font-mono text-xs">{provenance.route_segment_id}</span>
+            <span className="text-white font-mono text-xs">
+              {provenance.route_segment_id ?? '—'}
+            </span>
           </div>
           <div className="flex justify-between items-start py-2">
             <span className="text-white/50">Alert generated</span>
@@ -47,14 +50,28 @@ export function ProvenanceModal() {
   )
 }
 
-function ProvenanceRow({ label, value, ts }: { label: string; value: string; ts: string }) {
+function SourceRefRow({ label, ref: src }: { label: string; ref: SourceRef | null }) {
+  if (!src) {
+    return (
+      <div className="py-2 border-b border-border">
+        <div className="flex justify-between items-start">
+          <span className="text-white/50">{label}</span>
+          <span className="text-white/30 italic text-xs">unavailable</span>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="py-2 border-b border-border">
       <div className="flex justify-between items-start">
         <span className="text-white/50">{label}</span>
-        <span className="text-white font-medium text-right max-w-[55%]">{value}</span>
+        <span className="text-white font-medium text-right max-w-[55%]">{src.source_id}</span>
       </div>
-      <div className="text-right text-white/30 text-xs mt-0.5">{new Date(ts).toLocaleString()}</div>
+      <div className="flex justify-between text-xs mt-0.5">
+        <span className="text-white/30">{src.age_seconds}s ago</span>
+        <span className="text-white/30">{new Date(src.timestamp).toLocaleString()}</span>
+      </div>
     </div>
   )
 }

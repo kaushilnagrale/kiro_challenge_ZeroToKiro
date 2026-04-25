@@ -1,87 +1,44 @@
 """
 HydrationService — rule-based hydration risk classifier for PulseRoute.
 
-Scores biosignal, ride context, and weather conditions against a point table.
-Maps total points to RiskLevel (green/yellow/red) and provides human-readable
-reasons for the classification.
-
-## Current System: 10-Rule Classifier (0-100+ points)
-
-This implementation uses a sophisticated 10-rule system with granular thresholds:
+Thresholds are personalized per rider via the `thresholds` parameter.
 
 **Heart Rate (3 rules)**:
-- HR > 170 bpm → +40 points (critically high, max effort)
-- HR > 155 bpm → +25 points (very high, vigorous exercise)
-- HR > 140 bpm → +10 points (elevated, moderate exercise)
+- HR > hr_critical  → +40 points  (default 170 bpm)
+- HR > hr_high      → +25 points  (default 155 bpm)
+- HR > hr_elevated  → +10 points  (default 140 bpm)
 
 **Skin Temperature (2 rules)**:
-- skin_temp > 38.0°C → +30 points (critically high, thermoregulation failure)
-- skin_temp > 37.5°C → +15 points (elevated, impaired cooling)
+- skin_temp > skin_critical → +30 points  (default 38.0°C)
+- skin_temp > skin_elevated → +15 points  (default 37.5°C)
 
 **Heart Rate Variability (2 rules)**:
-- HRV < 20 ms → +20 points (critically low, high stress/fatigue)
-- HRV < 35 ms → +10 points (low, sympathetic activation)
+- HRV < hrv_critical → +20 points  (default 20 ms)
+- HRV < hrv_low      → +10 points  (default 35 ms)
 
 **Ride Duration (1 rule)**:
-- ride_minutes > 45 → +10 points (extended duration, cumulative fatigue)
+- ride_minutes > duration_threshold → +10 points  (default 45 min)
 
 **Heat Index (2 rules)**:
-- heat_index > 40°C → +15 points (extreme heat, danger zone)
-- heat_index > 35°C → +8 points (high heat, extreme caution)
+- heat_index > heat_danger  → +15 points  (default 40°C)
+- heat_index > heat_caution → +8 points   (default 35°C)
 
 **Risk Thresholds**:
-- 0-19 points → GREEN (safe, continue riding)
-- 20-44 points → YELLOW (caution, consider water break)
-- 45+ points → RED (danger, stop immediately)
+- 0-19 points → GREEN
+- 20-44 points → YELLOW
+- 45+ points → RED
 
-## Track C Spec: 6-Rule Classifier (0-8 points)
+## Personalization (Fix 2)
 
-The original Track C specification proposed a simpler 6-rule system:
-
-**Rules**:
-- hr_delta > 30 (HR above baseline) → +2 points
-- hrv_ms < 20 → +2 points
-- skin_temp_c > 36 → +1 point
-- ambient_temp_c > 38 → +1 point
-- uv_index > 8 → +1 point
-- ride_minutes > 30 → +1 point
-
-**Risk Thresholds**:
-- 0-2 points → GREEN
-- 3-4 points → YELLOW
-- 5+ points → RED
-
-## Decision: Keep Current 10-Rule System
-
-**Rationale**:
-1. **More sophisticated**: Provides better granularity for demo (more interesting transitions)
-2. **Already tested**: 100% branch coverage, all tests passing
-3. **Better UX**: More specific reasons (e.g., "Heart rate critically high (168 bpm)")
-4. **Physiologically accurate**: Thresholds based on exercise science research
-5. **Production-ready**: Integrated with user profiles for personalization
-
-The Track C 6-rule system is simpler but less expressive. For a compelling demo
-and production system, the current 10-rule implementation is superior.
-
-## Physiological Basis
-
-The thresholds are based on:
-- **HR zones**: 140+ = vigorous exercise, 170+ = max effort (ACSM guidelines)
-- **HRV**: <20ms indicates high stress/fatigue (Buchheit et al., 2013)
-- **Skin temp**: >38°C indicates thermoregulation failure (Casa et al., 2015)
-- **Heat index**: >35°C = extreme caution, >40°C = danger (NWS guidelines)
-
-## Integration with User Profiles
-
-The classifier integrates with UserProfileService for personalized thresholds:
-- **Beginner**: More conservative thresholds (alert at HR 140)
-- **Intermediate**: Standard thresholds (alert at HR 155)
-- **Advanced**: Higher thresholds (alert at HR 170)
-
-See `backend/services/user_profile_service.py` for personalization logic.
+Pass a `Thresholds` object to `classify()` to adjust per rider:
+- sensitive_mode: stricter thresholds (kids, elderly, cardiac)
+- fitness_level "advanced": more lenient thresholds (trained athletes)
+- fitness_level "beginner": slightly more conservative than default
 """
 
+from dataclasses import dataclass
 from datetime import datetime, timezone
+from typing import Literal, Optional
 
 import structlog
 
@@ -98,88 +55,163 @@ from shared.schema import (
 logger = structlog.get_logger()
 
 
+@dataclass
+class Thresholds:
+    """Personalized scoring thresholds for the hydration classifier."""
+    # Heart rate
+    hr_critical: float = 170.0
+    hr_high: float = 155.0
+    hr_elevated: float = 140.0
+    # Skin temperature
+    skin_critical: float = 38.0
+    skin_elevated: float = 37.5
+    # HRV (lower is worse)
+    hrv_critical: float = 20.0
+    hrv_low: float = 35.0
+    # Ride duration
+    duration_threshold: float = 45.0
+    # Heat index
+    heat_danger: float = 40.0
+    heat_caution: float = 35.0
+
+
+def build_thresholds(
+    sensitive_mode: bool = False,
+    fitness_level: Optional[Literal["beginner", "intermediate", "advanced"]] = None,
+) -> Thresholds:
+    """
+    Build personalized thresholds from rider profile flags.
+
+    sensitive_mode (kids, elderly, cardiac):
+      - Alert at lower HR, higher HRV, lower skin temp, lower heat index
+      - Shorter ride duration before flagging
+
+    fitness_level "advanced" (trained athletes):
+      - Alert at higher HR, lower HRV threshold, higher skin temp tolerance
+      - Longer ride duration before flagging
+
+    fitness_level "beginner":
+      - Slightly more conservative than default intermediate
+    """
+    if sensitive_mode:
+        return Thresholds(
+            hr_critical=150.0,
+            hr_high=135.0,
+            hr_elevated=120.0,
+            skin_critical=37.5,
+            skin_elevated=37.0,
+            hrv_critical=25.0,
+            hrv_low=40.0,
+            duration_threshold=30.0,
+            heat_danger=37.0,
+            heat_caution=33.0,
+        )
+
+    if fitness_level == "advanced":
+        return Thresholds(
+            hr_critical=180.0,
+            hr_high=165.0,
+            hr_elevated=150.0,
+            skin_critical=38.5,
+            skin_elevated=38.0,
+            hrv_critical=15.0,
+            hrv_low=28.0,
+            duration_threshold=60.0,
+            heat_danger=42.0,
+            heat_caution=37.0,
+        )
+
+    if fitness_level == "beginner":
+        return Thresholds(
+            hr_critical=160.0,
+            hr_high=145.0,
+            hr_elevated=130.0,
+            skin_critical=37.8,
+            skin_elevated=37.3,
+            hrv_critical=22.0,
+            hrv_low=38.0,
+            duration_threshold=35.0,
+            heat_danger=38.0,
+            heat_caution=34.0,
+        )
+
+    # intermediate / default
+    return Thresholds()
+
+
 class HydrationService:
-    """Rule-based hydration risk classifier."""
+    """Rule-based hydration risk classifier with personalized thresholds."""
 
     def classify(
         self,
         bio: Biosignal,
         context: RideContext,
         weather: WeatherSnapshot,
+        thresholds: Optional[Thresholds] = None,
     ) -> RiskScore:
         """
         Classify hydration risk based on biosignal, ride context, and weather.
 
-        Point scoring table:
-        - HR > 170 → +40
-        - HR > 155 → +25
-        - HR > 140 → +10
-        - skin_temp > 38.0 → +30
-        - skin_temp > 37.5 → +15
-        - HRV < 20 → +20
-        - HRV < 35 → +10
-        - ride_minutes > 45 → +10
-        - heat_index > 40 → +15
-        - heat_index > 35 → +8
-
-        Risk levels:
-        - 0–19 points: green
-        - 20–44 points: yellow
-        - 45+ points: red
+        Args:
+            bio:        Current biosignal reading.
+            context:    Ride context (duration, location).
+            weather:    Current weather snapshot.
+            thresholds: Personalized thresholds. Defaults to standard intermediate.
 
         Returns:
             RiskScore with level, points, top_reason, all_reasons, and provenance.
         """
+        t = thresholds or Thresholds()
         points = 0
-        reasons: list[tuple[int, str]] = []  # (points, reason)
+        reasons: list[tuple[int, str]] = []
 
         # Heart rate scoring
-        if bio.hr > 170:
+        if bio.hr > t.hr_critical:
             pts = 40
             points += pts
             reasons.append((pts, f"Heart rate critically high ({bio.hr:.0f} bpm)"))
-        elif bio.hr > 155:
+        elif bio.hr > t.hr_high:
             pts = 25
             points += pts
             reasons.append((pts, f"Heart rate very high ({bio.hr:.0f} bpm)"))
-        elif bio.hr > 140:
+        elif bio.hr > t.hr_elevated:
             pts = 10
             points += pts
             reasons.append((pts, f"Heart rate elevated ({bio.hr:.0f} bpm)"))
 
         # Skin temperature scoring
-        if bio.skin_temp_c > 38.0:
+        if bio.skin_temp_c > t.skin_critical:
             pts = 30
             points += pts
             reasons.append((pts, f"Skin temperature critically high ({bio.skin_temp_c:.1f}°C)"))
-        elif bio.skin_temp_c > 37.5:
+        elif bio.skin_temp_c > t.skin_elevated:
             pts = 15
             points += pts
             reasons.append((pts, f"Skin temperature elevated ({bio.skin_temp_c:.1f}°C)"))
 
         # HRV scoring (lower is worse)
-        if bio.hrv_ms < 20:
+        if bio.hrv_ms < t.hrv_critical:
             pts = 20
             points += pts
             reasons.append((pts, f"Heart rate variability critically low ({bio.hrv_ms:.0f} ms)"))
-        elif bio.hrv_ms < 35:
+        elif bio.hrv_ms < t.hrv_low:
             pts = 10
             points += pts
             reasons.append((pts, f"Heart rate variability low ({bio.hrv_ms:.0f} ms)"))
 
         # Ride duration scoring
-        if context.minutes > 45:
+        if context.minutes > t.duration_threshold:
             pts = 10
             points += pts
             reasons.append((pts, f"Extended ride duration ({context.minutes:.0f} minutes)"))
 
         # Heat index scoring
         if weather.heat_index_c is not None:
-            if weather.heat_index_c > 40:
+            if weather.heat_index_c > t.heat_danger:
                 pts = 15
                 points += pts
                 reasons.append((pts, f"Extreme heat index ({weather.heat_index_c:.1f}°C)"))
-            elif weather.heat_index_c > 35:
+            elif weather.heat_index_c > t.heat_caution:
                 pts = 8
                 points += pts
                 reasons.append((pts, f"High heat index ({weather.heat_index_c:.1f}°C)"))
@@ -192,11 +224,9 @@ class HydrationService:
         else:
             level = "green"
 
-        # Extract human-readable reasons
         all_reasons = [reason for _, reason in reasons]
         top_reason = reasons[0][1] if reasons else "All metrics within normal range"
 
-        # Build provenance
         now = datetime.now(timezone.utc)
         provenance = Provenance(
             bio_source=SourceRef(
@@ -209,7 +239,7 @@ class HydrationService:
                 timestamp=now,
                 age_seconds=0,
             ),
-            route_segment_id=None,  # HydrationService doesn't know about route segments
+            route_segment_id=None,
         )
 
         logger.info(
@@ -218,6 +248,7 @@ class HydrationService:
             points=points,
             top_reason=top_reason,
             num_reasons=len(all_reasons),
+            personalized=thresholds is not None,
         )
 
         return RiskScore(

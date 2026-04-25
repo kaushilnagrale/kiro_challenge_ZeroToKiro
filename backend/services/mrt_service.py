@@ -86,66 +86,56 @@ class MrtService:
                 delta_c=zone_data["delta_c"]
             ))
     
-    def get_mrt(self, lat: float, lng: float, ambient_temp_c: float) -> float:
+    def get_mrt(self, lat: float, lng: float, ambient_temp_c: float,
+                wind_kmh: float = 0.0) -> float:
         """
         Calculate MRT for a point.
-        
-        Formula: mrt = ambient_temp_c + 8.0 + zone_delta
+
+        Formula: MRT = ambient_temp_c + solar_offset + zone_delta + wind_offset
+
+        solar_offset = +8°C  (standard UTCI full-sun solar radiation load)
+        zone_delta   = from tempe_zones.json (hot zones +, cool zones -)
+        wind_offset  = negative, reduces MRT as wind speed increases
+                       (ISO 7933: ~1.5°C cooling per 10 km/h, capped at -6°C)
+
         First matching zone wins. Default delta = 0 if no zone matches.
-        
-        Args:
-            lat: Latitude
-            lng: Longitude
-            ambient_temp_c: Ambient air temperature in Celsius
-        
-        Returns:
-            Mean radiant temperature in Celsius
         """
         zone_delta = 0.0
-        
-        # First matching zone wins
         for zone in self.zones:
             if zone.contains(lat, lng):
                 zone_delta = zone.delta_c
                 break
-        
-        return ambient_temp_c + 8.0 + zone_delta
+
+        wind_offset = 0.0
+        if wind_kmh > 0:
+            wind_offset = -min(6.0, (wind_kmh / 10.0) * 1.5)
+
+        return ambient_temp_c + 8.0 + zone_delta + wind_offset
     
-    def annotate_route(self, polyline: list[tuple[float, float]], 
-                       ambient_temp_c: float) -> tuple[float, float]:
+    def annotate_route(self, polyline: list[tuple[float, float]],
+                       ambient_temp_c: float,
+                       wind_kmh: float = 0.0) -> tuple[float, float]:
         """
         Annotate a route polyline with MRT statistics.
-        
+
         Samples the polyline every ~100m and computes peak and mean MRT.
-        
-        Args:
-            polyline: List of (lat, lng) tuples defining the route
-            ambient_temp_c: Ambient air temperature in Celsius
-        
-        Returns:
-            Tuple of (peak_mrt_c, mean_mrt_c)
+        Wind speed is passed through to get_mrt for cooling adjustment.
         """
         if not polyline:
-            # Empty route: return base MRT
-            base_mrt = ambient_temp_c + 8.0
+            base_mrt = self.get_mrt(0, 0, ambient_temp_c, wind_kmh)
             return (base_mrt, base_mrt)
-        
-        # Sample every ~100m
+
         sample_points = self._sample_polyline(polyline, interval_m=100)
-        
         if not sample_points:
-            # Fallback to first point if sampling fails
             sample_points = [polyline[0]]
-        
-        # Calculate MRT for each sample point
+
         mrt_values = [
-            self.get_mrt(lat, lng, ambient_temp_c)
+            self.get_mrt(lat, lng, ambient_temp_c, wind_kmh)
             for lat, lng in sample_points
         ]
-        
+
         peak_mrt = max(mrt_values)
         mean_mrt = sum(mrt_values) / len(mrt_values)
-        
         return (peak_mrt, mean_mrt)
     
     def _sample_polyline(self, polyline: list[tuple[float, float]], 

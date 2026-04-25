@@ -42,6 +42,18 @@ def _heat_index(temp_c: float, humidity_pct: float) -> float:
     )
 
 
+def _wind_chill_offset(wind_kmh: float) -> float:
+    """
+    Approximate wind cooling effect on MRT (negative = cooler).
+    Based on ISO 7933 / UTCI: wind reduces perceived radiant load.
+    Returns a negative offset in °C to subtract from MRT.
+    """
+    if wind_kmh <= 0:
+        return 0.0
+    # Empirical: each 10 km/h of wind reduces MRT by ~1.5°C (capped at -6°C)
+    return -min(6.0, (wind_kmh / 10.0) * 1.5)
+
+
 def _find_current_hour_index(hourly_times: list[str]) -> int:
     """Return the index in hourly_times closest to the current UTC hour."""
     now_utc = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
@@ -93,7 +105,10 @@ class WeatherService:
                     params={
                         "latitude": lat,
                         "longitude": lng,
-                        "hourly": "temperature_2m,relativehumidity_2m,uv_index",
+                        "hourly": (
+                            "temperature_2m,relativehumidity_2m,uv_index,"
+                            "apparent_temperature,windspeed_10m"
+                        ),
                         "current_weather": "true",
                         "forecast_days": 1,
                         "timezone": "auto",
@@ -207,20 +222,29 @@ class WeatherService:
             uv_index: float = float(hourly["uv_index"][idx])
             wind_kmh: float = float(current_weather.get("windspeed", 0.0))
 
-            hi = _heat_index(temp_c, humidity_pct)
+            # Use Open-Meteo's apparent_temperature (feels-like) as heat index
+            # It accounts for humidity, wind, and solar radiation — more accurate
+            # than our hand-rolled Steadman approximation.
+            apparent_c_hourly = hourly.get("apparent_temperature", [])
+            if apparent_c_hourly and idx < len(apparent_c_hourly):
+                apparent_temp_c = float(apparent_c_hourly[idx])
+            else:
+                apparent_temp_c = _heat_index(temp_c, humidity_pct)
+
+            hi = apparent_temp_c  # use feels-like as heat index
 
             current_snapshot = WeatherSnapshot(
                 temp_c=temp_c,
                 humidity_pct=humidity_pct,
                 heat_index_c=hi,
                 uv_index=uv_index,
-                apparent_temp_c=hi,
+                apparent_temp_c=apparent_temp_c,
                 wind_kmh=wind_kmh,
             )
 
-            # Next 6 hours
+            # Next 12 hours of forecast (enough to cover any realistic ride)
             forecast: list[WeatherHourly] = []
-            for offset in range(1, 7):
+            for offset in range(1, 13):
                 fi = idx + offset
                 if fi >= len(hourly_times):
                     break
