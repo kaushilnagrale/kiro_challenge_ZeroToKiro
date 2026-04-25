@@ -43,7 +43,10 @@
       "Bash(python -m uvicorn backend.main:app --port 8001)",
       "Bash(taskkill /PID 55480 /F)",
       "PowerShell(Stop-Process -Force)",
-      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('fastest pts:', len\\(d['fastest']['polyline']\\), 'pulse pts:', len\\(d['pulseroute']['polyline']\\), 'dist:', d['fastest']['distance_m'], 'weather:', d['weather']['ambient_temp_c'] if d.get\\('weather'\\) else 'None'\\)\")"
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('fastest pts:', len\\(d['fastest']['polyline']\\), 'pulse pts:', len\\(d['pulseroute']['polyline']\\), 'dist:', d['fastest']['distance_m'], 'weather:', d['weather']['ambient_temp_c'] if d.get\\('weather'\\) else 'None'\\)\")",
+      "Bash(Get-Process python *)",
+      "Bash(curl -s \"http://localhost:8001/weather?lat=33.4255&lon=-111.94\")",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('%.0fF feels like %.0fF' % \\(d['ambient_temp_c']*9/5+32, d['heat_index_c']*9/5+32\\)\\)\")"
     ]
   }
 }

@@ -12,7 +12,6 @@ import httpx
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
 NWS_ALERTS_URL = "https://api.weather.gov/alerts/active"
 
-# Default: Tempe, AZ
 DEFAULT_LAT = 33.4255
 DEFAULT_LON = -111.9400
 
@@ -24,7 +23,8 @@ async def fetch_weather(lat: float = DEFAULT_LAT, lon: float = DEFAULT_LON) -> d
         "longitude": lon,
         "current": (
             "temperature_2m,relative_humidity_2m,"
-            "apparent_temperature,wind_speed_10m"
+            "apparent_temperature,wind_speed_10m,"
+            "shortwave_radiation,direct_radiation,diffuse_radiation,cloud_cover"
         ),
         "temperature_unit": "celsius",
         "wind_speed_unit": "ms",
@@ -36,21 +36,29 @@ async def fetch_weather(lat: float = DEFAULT_LAT, lon: float = DEFAULT_LON) -> d
             resp.raise_for_status()
             current = resp.json().get("current", {})
             return {
-                "ambient_temp_c":  current.get("temperature_2m", 41.0),
-                "humidity_pct":    current.get("relative_humidity_2m", 15.0),
-                "heat_index_c":    current.get("apparent_temperature", 44.0),
-                "wind_speed_ms":   current.get("wind_speed_10m", 2.5),
-                "source_id":       "open-meteo",
-                "timestamp":       datetime.now(timezone.utc).isoformat(),
+                "ambient_temp_c":    current.get("temperature_2m", 41.0),
+                "humidity_pct":      current.get("relative_humidity_2m", 15.0),
+                "heat_index_c":      current.get("apparent_temperature", 44.0),
+                "wind_speed_ms":     current.get("wind_speed_10m", 2.5),
+                "direct_radiation":  current.get("direct_radiation", 680.0),
+                "diffuse_radiation": current.get("diffuse_radiation", 140.0),
+                "cloud_cover":       current.get("cloud_cover", 5.0),
+                "source_id":         "open-meteo",
+                "timestamp":         datetime.now(timezone.utc).isoformat(),
+                "advisory":          None,
             }
     except Exception:
         return {
-            "ambient_temp_c": 41.0,
-            "humidity_pct":   15.0,
-            "heat_index_c":   44.0,
-            "wind_speed_ms":  2.5,
-            "source_id":      "fallback-defaults",
-            "timestamp":      datetime.now(timezone.utc).isoformat(),
+            "ambient_temp_c":    41.0,
+            "humidity_pct":      15.0,
+            "heat_index_c":      44.0,
+            "wind_speed_ms":     2.5,
+            "direct_radiation":  680.0,
+            "diffuse_radiation": 140.0,
+            "cloud_cover":       5.0,
+            "source_id":         "fallback-defaults",
+            "timestamp":         datetime.now(timezone.utc).isoformat(),
+            "advisory":          None,
         }
 
 

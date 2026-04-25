@@ -57,6 +57,9 @@ export interface WeatherData {
   humidity_pct: number;
   heat_index_c: number;
   wind_speed_ms: number;
+  direct_radiation?: number;   // W/m² — used for MRT calculation
+  diffuse_radiation?: number;  // W/m²
+  cloud_cover?: number;        // %
   source_id: string;
   timestamp: string;
   advisory: string | null;

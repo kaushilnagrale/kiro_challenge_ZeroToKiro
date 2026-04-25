@@ -1,0 +1,19 @@
+{
+  "enabled": true,
+  "name": "Water Stops Audit",
+  "description": "After editing routing.py or stops.py, audits water stop data to ensure the correct number of stops and accurate names are used from the real stops dataset rather than hardcoded values",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "backend/routing.py",
+      "backend/stops.py"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A routing or stops file was just edited. Audit the water stop data for correctness:\n\n1. Open backend/stops.py and count the exact number of fountains in _mock_stops() — there are 8 fountains (f1–f8), 4 cafes (c1–c4), and 2 repair stations (r1–r2).\n\n2. Open backend/routing.py and check both _mock_routes() and compute_routes(). The pulse_stops list is currently hardcoded to exactly 2 stops (\"Hayden Library Fountain\" and \"Mill Avenue Fountain\") with interpolated fake coordinates. This is wrong.\n\n3. Fix routing.py so that pulse_stops are sourced from the real stops dataset in stops.py. Call fetch_stops() (already imported-compatible via the models) and select the nearest fountains along the route polyline using haversine distance. The correct number of water stops should reflect actual nearby fountains — not a hardcoded 2. Use the real names and real lat/lon from _mock_stops() (e.g. \"MU Courtyard Fountain\", \"Tyler Mall Fountain\", \"Hayden Library Fountain\", \"Tempe Beach Park Fountain\", \"Mill Avenue Fountain\", \"Apache Blvd Fountain\", \"Rural Rd Park Fountain\", \"Gammage Pkwy Fountain\").\n\n4. Ensure both _mock_routes() and compute_routes() use the same corrected logic so the stop count and names are consistent and accurate."
+  },
+  "workspaceFolderName": "kiro_challenge_ZeroToKiro",
+  "shortName": "water-stops-audit"
+}

@@ -68,7 +68,7 @@ async def health():
 @app.post("/route", response_model=RouteResponse)
 async def route(req: RouteRequest):
     weather = await fetch_weather(req.origin[0], req.origin[1])
-    fastest, pulse = await compute_routes(req)
+    fastest, pulse = await compute_routes(req, weather)
     now = datetime.now(timezone.utc)
     provenance = ProvenanceObj(
         biosignal_source_id="bio_sim_v1",

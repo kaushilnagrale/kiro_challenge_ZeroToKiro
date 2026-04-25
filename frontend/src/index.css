@@ -2,14 +2,33 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Leaflet container must have explicit height */
+/* ── Dark base ──────────────────────────────────────────── */
+html, body, #root {
+  background-color: #0d1117;
+  color: #e6edf3;
+}
+
+/* ── Leaflet ─────────────────────────────────────────────── */
 .leaflet-container {
   width: 100%;
   height: 100%;
   z-index: 0;
 }
 
-/* Fix Leaflet popup z-index above our panels */
 .leaflet-popup {
   z-index: 10;
+}
+
+/* Dark popup */
+.leaflet-popup-content-wrapper {
+  background: #161b22;
+  color: #e6edf3;
+  border: 1px solid #30363d;
+  border-radius: 10px;
+}
+.leaflet-popup-tip {
+  background: #161b22;
+}
+.leaflet-popup-close-button {
+  color: #7d8590 !important;
 }
