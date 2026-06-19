@@ -26,3 +26,6 @@ Thumbs.db
 
 # Kiro cache (keep specs/steering/hooks/agents in git)
 .kiro/cache/
+
+# Claude Code local memory
+.claude/

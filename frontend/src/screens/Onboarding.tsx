@@ -13,27 +13,27 @@ const DEMO_PROFILES: Record<Exclude<AppId, 'none'>, {
   color: string; label: string
 }> = {
   strava: {
-    name: 'Praveen Salapu', fitness_level: 'Intermediate',
+    name: 'Kaushil Nagrale', fitness_level: 'Intermediate',
     resting_hr: 65, hrv_baseline: 55, ytd_miles: 892,
     avatar: '🚴', color: '#FC4C02', label: 'Strava',
   },
   apple: {
-    name: 'Praveen Salapu', fitness_level: 'Advanced',
+    name: 'Kaushil Nagrale', fitness_level: 'Advanced',
     resting_hr: 58, hrv_baseline: 68, ytd_miles: 1240,
     avatar: '🍎', color: '#ffffff', label: 'Apple Fitness',
   },
   garmin: {
-    name: 'Praveen Salapu', fitness_level: 'Intermediate',
+    name: 'Kaushil Nagrale', fitness_level: 'Intermediate',
     resting_hr: 62, hrv_baseline: 60, ytd_miles: 670,
     avatar: '⌚', color: '#007CC3', label: 'Garmin Connect',
   },
   wahoo: {
-    name: 'Praveen Salapu', fitness_level: 'Advanced',
+    name: 'Kaushil Nagrale', fitness_level: 'Advanced',
     resting_hr: 55, hrv_baseline: 72, ytd_miles: 1580,
     avatar: '🔴', color: '#E8003D', label: 'Wahoo',
   },
   polar: {
-    name: 'Praveen Salapu', fitness_level: 'Beginner',
+    name: 'Kaushil Nagrale', fitness_level: 'Beginner',
     resting_hr: 70, hrv_baseline: 48, ytd_miles: 320,
     avatar: '🐻‍❄️', color: '#D5001C', label: 'Polar Flow',
   },
@@ -90,7 +90,7 @@ export function Onboarding() {
       ? DEMO_PROFILES[connected].resting_hr
       : 65
     setProfile({
-      name: name || 'Praveen',
+      name: name || 'Kaushil',
       age: parseInt(age) || 28,
       weight_kg: parseInt(weight) || 75,
       sensitive_mode: sensitive,
